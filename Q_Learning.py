@@ -132,13 +132,13 @@ def plot_training(all_rewards, all_lengths, all_errors, rolling_length=500):
     axs[2].set_ylabel("Average TD Error")
     
     plt.tight_layout() 
-    plt.savefig("./results/q_learning_all_plots.png")
-    plt.show()
+    plt.savefig("./results/q_learning_all_plots_df01.png")
+    # plt.show()
 
 def watch_agent(q_table):
     
     print("\nWatching trained agent...")
-    env_human = gym.make("Taxi-v3", render_mode="human")
+    env_human = gym.make("Taxi-v3", render_mode=None)
     state, info = env_human.reset()
     terminated = False
     truncated = False
@@ -153,7 +153,7 @@ def watch_agent(q_table):
 
 def watch_agent_in_scenario(q_table, start_row, start_col, passenger_loc, dest_loc):
 
-    env_human = gym.make("Taxi-v3", render_mode="human")
+    env_human = gym.make("Taxi-v3", render_mode=None)
     
     # We must call reset() once to initialize the environment and renderer
     # The state it returns is random, so we will ignore it.
@@ -321,7 +321,7 @@ def main():
         'num_episodes': 100000,         
         'max_steps_per_episode': 100,      
         'learning_rate': 0.1,           
-        'discount_factor': 0.99, # How much to value future rewards (0.0=only care about now, 1.0=care about all future).
+        'discount_factor': 0.1, # How much to value future rewards (0.0=only care about now, 1.0=care about all future).
         'epsilon': 1.0,          # The starting probability of taking a random action (100% random).
         'max_epsilon': 1.0,      # The maximum value epsilon can be (the starting value).
         'min_epsilon': 0.01,     # The minimum value epsilon will decay to (1% random) to ensure a little exploration.
