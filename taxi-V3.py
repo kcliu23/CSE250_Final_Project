@@ -132,7 +132,7 @@ def plot_training(all_rewards, all_lengths, all_errors, rolling_length=500):
     axs[2].set_ylabel("Average TD Error")
     
     plt.tight_layout() 
-    plt.savefig("q_learning_all_plots.png")
+    plt.savefig("./results/q_learning_all_plots.png")
     plt.show()
 
 def watch_agent(q_table):
@@ -355,10 +355,10 @@ def main():
      # Save all figures
 
 
-    fig1.savefig("policy_1a_R_goto.png")
-    fig2.savefig("policy_1b_B_dropoff.png")
-    fig3.savefig("policy_2a_Y_goto.png")
-    fig4.savefig("policy_2b_R_dropoff.png")
+    fig1.savefig("./results/policy_1a_R_goto.png")
+    fig2.savefig("./results/policy_1b_B_dropoff.png")
+    fig3.savefig("./results/policy_2a_Y_goto.png")
+    fig4.savefig("./results/policy_2b_R_dropoff.png")
     # plt.show() # Show all figures
     
     temp_env.close()
