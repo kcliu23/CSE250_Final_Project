@@ -5,89 +5,135 @@ import seaborn as sns
 import time
 import matplotlib.patches as mpatches
 from matplotlib.colors import ListedColormap, BoundaryNorm
+import pandas as pd
 
-def value_iteration(env, discount_factor=0.99, theta=1e-9):
+def value_iteration(env, discount_factor=0.99, theta=1e-9, max_iterations=1000):
     """
-    Runs the Value Iteration algorithm to find the optimal Value Function V*.
+    Runs Value Iteration to find the optimal Value Function V* and Policy.
+    Now returns 'iterations' count for comparison.
     """
     state_size = env.observation_space.n
     action_size = env.action_space.n
     
-    # Initialize V(s) to zeros
     value_table = np.zeros(state_size)
-    deltas = [] # To track convergence speed
+    deltas = [] 
     
     iteration = 0
-    print("Starting Value Iteration...")
     
-    while True:
+    # --- The Training Loop ---
+    while iteration < max_iterations:
         delta = 0
         
-        # Sweep through all states
+        # Sweep through all 500 states
         for s in range(state_size):
             v_old = value_table[s]
             
-            # Calculate the value of all actions from this state
+            # Check every action's possible outcome
             action_values = []
             for a in range(action_size):
                 q_sa = 0
-                
-                ### --- FIX 1: Use env.unwrapped.P --- ###
+                # Sum over all possible next states (prob, next_state, reward, done)
                 for prob, next_state, reward, terminated in env.unwrapped.P[s][a]:
                     q_sa += prob * (reward + discount_factor * value_table[next_state])
-                
                 action_values.append(q_sa)
             
-            # Update value table with the best action's value
+            # Update V(s) to the max value found
             value_table[s] = np.max(action_values)
-            
-            # Track largest change
             delta = max(delta, abs(v_old - value_table[s]))
             
         deltas.append(delta)
         iteration += 1
         
         if delta < theta:
-            print(f"Value Iteration converged after {iteration} iterations.")
             break
             
-    # --- Extract Optimal Policy ---
-    print("Extracting optimal policy...")
+    # --- Policy Extraction ---
     policy = np.zeros(state_size, dtype=int)
-    
     for s in range(state_size):
         action_values = []
         for a in range(action_size):
             q_sa = 0
-            
-            ### --- FIX 2: Use env.unwrapped.P here too --- ###
             for prob, next_state, reward, terminated in env.unwrapped.P[s][a]:
                 q_sa += prob * (reward + discount_factor * value_table[next_state])
-            
             action_values.append(q_sa)
-        
-        # The best action is the one that maximizes the expected value
         policy[s] = np.argmax(action_values)
         
-    return value_table, policy, deltas
-def plot_convergence(deltas):
-    """Plots the 'Delta' (max change) over iterations."""
-    plt.figure(figsize=(10, 6))
-    plt.plot(deltas)
-    plt.yscale('log') # Log scale makes it easier to see small deltas
-    plt.title("Value Iteration Convergence (Delta per Iteration)")
-    plt.xlabel("Iteration")
-    plt.ylabel("Max Value Change (Delta) - Log Scale")
-    plt.grid(True, which="both", ls="-")
-    plt.savefig("./results_V/vi_convergence_plot.png")
-    plt.show()
+    return value_table, policy, deltas, iteration
+
+def evaluate_policy(env, policy, episodes=100):
+    """
+    Quantitatively measures how good the policy is.
+    Runs 100 episodes without exploration and calculates average reward.
+    """
+    total_rewards = []
+    total_steps = []
+    
+    for _ in range(episodes):
+        state, _ = env.reset()
+        episode_reward = 0
+        steps = 0
+        terminated = False
+        truncated = False
+        
+        while not (terminated or truncated):
+            action = policy[state]
+            state, reward, terminated, truncated, _ = env.step(action)
+            episode_reward += reward
+            steps += 1
+            if steps > 100: break # Safety break
+            
+        total_rewards.append(episode_reward)
+        total_steps.append(steps)
+        
+    avg_reward = np.mean(total_rewards)
+    avg_steps = np.mean(total_steps)
+    return avg_reward, avg_steps
+
+def run_ablation_study(env):
+    """
+    Compares different Hyperparameters (Gamma).
+    """
+    print("\n--- Running Ablation Study (Hyperparameter Comparison) ---")
+    
+    # We will test how Discount Factor affects convergence speed
+    gammas = [0.1, 0.5, 0.8, 0.9, 0.99]
+    results_iters = []
+    results_rewards = []
+    
+    for gamma in gammas:
+        print(f"Testing Gamma (Discount Factor): {gamma}")
+        _, policy, _, iterations = value_iteration(env, discount_factor=gamma)
+        
+        # Evaluate how good this policy is
+        avg_reward, _ = evaluate_policy(env, policy, episodes=50)
+        
+        results_iters.append(iterations)
+        results_rewards.append(avg_reward)
+    
+    # --- Plot 1: Gamma vs. Convergence Speed ---
+    plt.figure(figsize=(10, 5))
+    plt.plot(gammas, results_iters, marker='o', color='purple')
+    plt.title("Impact of Discount Factor (Gamma) on Convergence Speed")
+    plt.xlabel("Discount Factor (Gamma)")
+    plt.ylabel("Iterations to Converge")
+    plt.grid(True)
+    plt.savefig("./results_V/ablation_gamma_vs_iterations.png")
+    print("Saved ablation plot: ablation_gamma_vs_iterations.png")
+    
+    # --- Plot 2: Gamma vs. Final Score ---
+    plt.figure(figsize=(10, 5))
+    plt.plot(gammas, results_rewards, marker='s', color='green')
+    plt.title("Impact of Discount Factor (Gamma) on Policy Quality")
+    plt.xlabel("Discount Factor (Gamma)")
+    plt.ylabel("Average Reward (50 episodes)")
+    plt.grid(True)
+    plt.savefig("./results_V/ablation_gamma_vs_reward.png")
+    print("Saved ablation plot: ablation_gamma_vs_reward.png")
 
 def visualize_vi_policy_maps(env, value_table, policy, scenario_name, passenger_loc, dest_loc):
     """
     Creates specific heatmaps for Value Iteration results.
-    Identical to the Q-Learning visualization for comparison.
     """
-    
     # Setup grids
     value_grid_goto = np.zeros((5, 5))
     policy_grid_goto = np.zeros((5, 5), dtype=int)
@@ -159,60 +205,74 @@ def visualize_vi_policy_maps(env, value_table, policy, scenario_name, passenger_
 
 def watch_vi_agent(env, policy, start_row, start_col, passenger_loc, dest_loc):
     """Visualizes the Optimal Policy for a specific scenario."""
-    
-    # 1. Initialize the environment (Satisfies the ResetNeeded error)
     env.reset() 
-    
-    # 2. Manually set our specific scenario
     state = env.unwrapped.encode(start_row, start_col, passenger_loc, dest_loc)
     env.unwrapped.s = state
     
     print(f"\nWatching VI Agent: ({start_row},{start_col}) -> Pass({passenger_loc}) -> Dest({dest_loc})")
     
-    # 3. Now we can render safely
-    env.render()
     time.sleep(1)
     
     terminated = False
     truncated = False
     steps = 0
+    total_reward = 0
     
     while not (terminated or truncated):
         action = policy[state]
         state, reward, terminated, truncated, info = env.step(action)
         steps += 1
+        total_reward += reward
         time.sleep(0.5)
         
-    print(f"Finished in {steps} steps.")
+    print(f"Finished in {steps} steps. Total Reward: {total_reward}")
+
+def plot_convergence(deltas):
+    plt.figure(figsize=(10, 6))
+    plt.plot(deltas)
+    plt.yscale('log')
+    plt.title("Value Iteration Convergence (Delta per Iteration)")
+    plt.xlabel("Iteration")
+    plt.ylabel("Max Value Change (Delta) - Log Scale")
+    plt.grid(True, which="both", ls="-")
+    plt.savefig("./results_V/vi_convergence_plot.png")
+    print("Saved convergence plot: vi_convergence_plot.png")
+
 def main():
-    # 1. Setup Environment
+    # 1. Setup
     env = gym.make("Taxi-v3", render_mode=None)
     
-    # 2. Run Value Iteration
-    value_table, policy, deltas = value_iteration(env)
+    # --- PART A: Main Training ---
+    print("--- Part A: Running Main Value Iteration ---")
+    value_table, policy, deltas, iterations = value_iteration(env, discount_factor=0.99)
+    print(f"Converged in {iterations} iterations.")
     
-    # 3. Plot Convergence
+    # --- PART B: Quantitative Evaluation (New!) ---
+    print("\n--- Part B: Quantitative Evaluation ---")
+    avg_reward, avg_steps = evaluate_policy(env, policy, episodes=100)
+    print(f"FINAL SCORE: Average Reward over 100 episodes: {avg_reward:.2f}")
+    print(f"FINAL SCORE: Average Steps per episode: {avg_steps:.2f}")
+    
+    # --- PART C: Plotting ---
     plot_convergence(deltas)
     
-    # 4. Generate Comparison Heatmaps
-    print("Generating Policy Maps...")
     temp_env = gym.make("Taxi-v3")
-    
-    # Scenario 1: R(0,0) to B(4,0)
     fig1 = visualize_vi_policy_maps(temp_env, value_table, policy, "R to B", 0, 2)
     fig1.savefig("./results_V/vi_policy_R_to_B.png")
     
-    # Scenario 2: Y(4,3) to R(0,0)
     fig2 = visualize_vi_policy_maps(temp_env, value_table, policy, "Y to R", 3, 0)
     fig2.savefig("./results_V/vi_policy_Y_to_R.png")
     
-    plt.show()
+    # --- PART D: Ablation Study (New!) ---
+    run_ablation_study(env)
     
-    # 5. Watch the Agent
-    env_human = gym.make("Taxi-v3", render_mode="human")
-    watch_vi_agent(env_human, policy, 0, 1, 0, 2) # R to B example
-    watch_vi_agent(env_human, policy, 2, 2, 3, 0) # Y to R example
-    env_human.close()
+    print("\nAll experiments complete. Check './results_V/' folder.")
+    
+    # --- PART E: Watch It Run ---
+    # Uncomment below if you want to see the animation
+    # env_human = gym.make("Taxi-v3", render_mode="human")
+    # watch_vi_agent(env_human, policy, 0, 1, 0, 2) 
+    # env_human.close()
 
 if __name__ == "__main__":
     main()
