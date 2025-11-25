@@ -155,13 +155,10 @@ def watch_agent_in_scenario(q_table, start_row, start_col, passenger_loc, dest_l
 
     env_human = gym.make("Taxi-v3", render_mode=None)
     
-    # We must call reset() once to initialize the environment and renderer
-    # The state it returns is random, so we will ignore it.
     state, info = env_human.reset()
     
-    # --- Encode and Set Our Desired State ---
     try:
-        # Get the integer representing our desired scenario
+
         desired_state = env_human.unwrapped.encode(start_row, start_col, passenger_loc, dest_loc)
     except Exception as e:
         print(f"Error encoding state: {e}")
@@ -169,13 +166,9 @@ def watch_agent_in_scenario(q_table, start_row, start_col, passenger_loc, dest_l
         env_human.close()
         return
         
-    # Manually set the environment's current state to our desired one
     env_human.unwrapped.s = desired_state
-    state = desired_state # This is the state our loop will start with
+    state = desired_state 
     
-    # --- Run the Simulation ---
-    # The render window will show the random reset state until the first
-    # step. We can add a pause to make this clear.
     scenario_name = f"Taxi at ({start_row},{start_col}), Pass at {passenger_loc}, Dest at {dest_loc}"
     print(f"\nWatching agent in scenario: {scenario_name}")
     print("Press Enter to start the simulation...")
@@ -186,7 +179,6 @@ def watch_agent_in_scenario(q_table, start_row, start_col, passenger_loc, dest_l
     total_reward = 0
     
     while not (terminated or truncated):
-        # Exploit: Always take the best action
         action = np.argmax(q_table[state, :])
         state, reward, terminated, truncated, info = env_human.step(action)
         total_reward += reward
@@ -203,8 +195,7 @@ def create_grids_taxi(env, q_table, passenger_loc, dest_loc):
     Phase 1: "Go to Passenger" (Passenger is at passenger_loc)
     Phase 2: "Go to Destination" (Passenger is in the taxi)
     """
-    
-    # --- Create 5x5 grids for both phases ---
+
     value_grid_goto = np.zeros((5, 5))
     policy_grid_goto = np.zeros((5, 5), dtype=int)
     
@@ -213,13 +204,11 @@ def create_grids_taxi(env, q_table, passenger_loc, dest_loc):
 
     for r in range(5):
         for c in range(5):
-            # --- Phase 1: Go to Passenger ---
             # State: (r, c, passenger_loc, dest_loc)
             state_goto = env.unwrapped.encode(r, c, passenger_loc, dest_loc)
             value_grid_goto[r, c] = np.max(q_table[state_goto, :])
             policy_grid_goto[r, c] = np.argmax(q_table[state_goto, :])
             
-            # --- Phase 2: Go to Destination ---
             # State: (r, c, 4, dest_loc) (4 = "in taxi")
             state_dropoff = env.unwrapped.encode(r, c, 4, dest_loc)
             value_grid_dropoff[r, c] = np.max(q_table[state_dropoff, :])
@@ -235,23 +224,20 @@ def create_plots_taxi(value_grid, policy_grid, title: str):
     2. Policy (Best Action)
     """
     
-    # --- Setup ---
+
     action_labels = ["South", "North", "East", "West", "Pickup", "Dropoff"]
 
-    ### --- THIS IS THE FIX --- ###
-    
-    # 1. Create our custom colormap
+
     # 0=Move (lightgreen), 1=Pickup (magenta), 2=Dropoff (grey)
     cmap = ListedColormap(["lightgreen", "magenta", "grey"])
     
-    # 2. Create the legend handles to match
+
     legend_patches = [
         mpatches.Patch(color="lightgreen", label="Move (0-3)"),
         mpatches.Patch(color="magenta", label="Pickup (4)"),
         mpatches.Patch(color="grey", label="Dropoff (5)")
     ]
 
-    # 3. Map the action indices (0-5) to types (0-2) for coloring
     policy_grid_types = np.zeros((5, 5), dtype=int)
     for r in range(5):
         for c in range(5):
@@ -260,11 +246,9 @@ def create_plots_taxi(value_grid, policy_grid, title: str):
             elif action == 4: policy_grid_types[r, c] = 1   # Type 1 = Pickup
             elif action == 5: policy_grid_types[r, c] = 2   # Type 2 = Dropoff
 
-    # --- Create Figure ---
     fig, axs = plt.subplots(ncols=2, figsize=(13, 6))
     fig.suptitle(title, fontsize=16)
 
-    # --- 1. Plot the V(s) - State Values Heatmap ---
     ax1 = axs[0]
     ax1.set_title("V(s) - State Values")
     sns.heatmap(
@@ -278,12 +262,11 @@ def create_plots_taxi(value_grid, policy_grid, title: str):
     ax1.set_xlabel("Column")
     ax1.set_ylabel("Row")
 
-    # --- 2. Plot the 2D Policy Heatmap ---
     ax2 = axs[1]
     ax2.set_title("Policy (Best Action)")
     
-    sns.heatmap(
-        policy_grid_types, # Use the 0-2 types for color
+    sns.heatmap( 
+        policy_grid_types,
         annot=False,
         cmap=cmap,
         fmt="d",
@@ -292,8 +275,7 @@ def create_plots_taxi(value_grid, policy_grid, title: str):
         vmin=0,
         vmax=2,
     )
-    
-    # Add text labels from the 0-5 action grid
+
     for r in range(5):
         for c in range(5):
             ax2.text(c + 0.5, r + 0.5, action_labels[policy_grid[r, c]], 
@@ -303,20 +285,20 @@ def create_plots_taxi(value_grid, policy_grid, title: str):
     ax2.set_ylabel("Row")
     ax2.legend(handles=legend_patches, bbox_to_anchor=(1.5, 1))
     
-    plt.tight_layout() # Prevent labels from overlapping
+    plt.tight_layout() 
     
     return fig
 
 def main():
-    # --- 1. Setup ---
+
     env = gym.make("Taxi-v3", render_mode=None)
     state_size = env.observation_space.n
     action_size = env.action_space.n
     
-    # --- 2. Initialize Q-Table ---
+
     q_table = initialize_q_table(state_size, action_size)
     
-    # --- 3. Set Hyperparameters ---
+    #Set Hyperparameters 
     hyperparameters = {
         'num_episodes': 100000,         
         'max_steps_per_episode': 100,      
@@ -352,18 +334,17 @@ def main():
     fig3 = create_plots_taxi(vg_goto_Y, pg_goto_Y, "Phase 1: Policy to pick up at Y(4,3)")
     fig4 = create_plots_taxi(vg_drop_R, pg_drop_R, "Phase 2: Policy to drop off at R(0,0)")
     
-     # Save all figures
 
 
     fig1.savefig("./results/policy_1a_R_goto.png")
     fig2.savefig("./results/policy_1b_B_dropoff.png")
     fig3.savefig("./results/policy_2a_Y_goto.png")
     fig4.savefig("./results/policy_2b_R_dropoff.png")
-    # plt.show() # Show all figures
+    # plt.show() 
     
     temp_env.close()
 
-    # --- 7. Watch Trained Agent in Specific Scenarios ---
+    # Watch Trained Agent in Specific Scenarios 
     # The four pickup/dropoff spots (R, G, B, Y) and the "in-taxi" status
     # 0 = R (at row 0, col 0)
     # 1 = G (at row 0, col 4)
@@ -379,7 +360,7 @@ def main():
                             start_row=2, start_col=2, 
                             passenger_loc=3, dest_loc=0) # Y to R
 
-    # --- 8. Watch Trained Agent ---
+    # Watch Trained Agent
     watch_agent(q_table)
 
 

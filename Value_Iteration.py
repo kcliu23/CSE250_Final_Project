@@ -20,11 +20,9 @@ def value_iteration(env, discount_factor=0.99, theta=1e-9, max_iterations=1000):
     
     iteration = 0
     
-    # --- The Training Loop ---
     while iteration < max_iterations:
         delta = 0
         
-        # Sweep through all 500 states
         for s in range(state_size):
             v_old = value_table[s]
             
@@ -47,7 +45,6 @@ def value_iteration(env, discount_factor=0.99, theta=1e-9, max_iterations=1000):
         if delta < theta:
             break
             
-    # --- Policy Extraction ---
     policy = np.zeros(state_size, dtype=int)
     for s in range(state_size):
         action_values = []
@@ -95,7 +92,6 @@ def run_ablation_study(env):
     """
     print("\n--- Running Ablation Study (Hyperparameter Comparison) ---")
     
-    # We will test how Discount Factor affects convergence speed
     gammas = [0.1, 0.5, 0.8, 0.9, 0.99]
     results_iters = []
     results_rewards = []
@@ -110,7 +106,6 @@ def run_ablation_study(env):
         results_iters.append(iterations)
         results_rewards.append(avg_reward)
     
-    # --- Plot 1: Gamma vs. Convergence Speed ---
     plt.figure(figsize=(10, 5))
     plt.plot(gammas, results_iters, marker='o', color='purple')
     plt.title("Impact of Discount Factor (Gamma) on Convergence Speed")
@@ -120,7 +115,6 @@ def run_ablation_study(env):
     plt.savefig("./results_V/ablation_gamma_vs_iterations.png")
     print("Saved ablation plot: ablation_gamma_vs_iterations.png")
     
-    # --- Plot 2: Gamma vs. Final Score ---
     plt.figure(figsize=(10, 5))
     plt.plot(gammas, results_rewards, marker='s', color='green')
     plt.title("Impact of Discount Factor (Gamma) on Policy Quality")
@@ -152,7 +146,6 @@ def visualize_vi_policy_maps(env, value_table, policy, scenario_name, passenger_
             value_grid_dropoff[r, c] = value_table[state_dropoff]
             policy_grid_dropoff[r, c] = policy[state_dropoff]
 
-    # --- Plotting ---
     fig, axs = plt.subplots(ncols=2, figsize=(13, 6))
     fig.suptitle(f"VI Optimal Policy: {scenario_name}", fontsize=16)
     
@@ -239,21 +232,18 @@ def plot_convergence(deltas):
     print("Saved convergence plot: vi_convergence_plot.png")
 
 def main():
-    # 1. Setup
     env = gym.make("Taxi-v3", render_mode=None)
     
-    # --- PART A: Main Training ---
     print("--- Part A: Running Main Value Iteration ---")
     value_table, policy, deltas, iterations = value_iteration(env, discount_factor=0.99)
     print(f"Converged in {iterations} iterations.")
     
-    # --- PART B: Quantitative Evaluation (New!) ---
+
     print("\n--- Part B: Quantitative Evaluation ---")
     avg_reward, avg_steps = evaluate_policy(env, policy, episodes=100)
     print(f"FINAL SCORE: Average Reward over 100 episodes: {avg_reward:.2f}")
     print(f"FINAL SCORE: Average Steps per episode: {avg_steps:.2f}")
     
-    # --- PART C: Plotting ---
     plot_convergence(deltas)
     
     temp_env = gym.make("Taxi-v3")
@@ -263,7 +253,6 @@ def main():
     fig2 = visualize_vi_policy_maps(temp_env, value_table, policy, "Y to R", 3, 0)
     fig2.savefig("./results_V/vi_policy_Y_to_R.png")
     
-    # --- PART D: Ablation Study (New!) ---
     run_ablation_study(env)
     
     print("\nAll experiments complete. Check './results_V/' folder.")
