@@ -16,18 +16,19 @@ The Taxi problem involves navigating a 5x5 grid world to pick up a passenger fro
 
     ├── Value_Iteration.py      # Implementation of Model-Based Value Iteration
     ├── q_learning.py           # Implementation of Model-Free Q-Learning
-    ├── run_ablation.py         # Script to run sensitivity analysis for VI
-    ├── results/                # Stores generated plots and policy heatmaps
+    ├── results_Q/                # Stores generated plots and policy heatmaps
     │   ├── q_learning_all_plots_baseline.png
     │   ├── comparison_stability.png
     │   └── ... (other plots)
-    ├── value_iteration/        # Stores VI-specific plots
+    ├── results_V/        # Stores VI-specific plots
     │   ├── vi_convergence_plot.png
     │   └── ...
-    ├── CSE250_Final_Project_Report.pdf  # The final academic report
+    ├── Docs/
+    |   ├── milestone1.pdf  
+    │   └── milestone1.docx
     └── README.md
 
-## 🚀 How to Run the Code
+##  How to Run the Code
 
 ### Prerequisites
 You need Python 3.x and the following libraries installed:
@@ -39,12 +40,12 @@ This script calculates the optimal policy using the known transition matrix $P(s
 
     python Value_Iteration.py
 
-* **Output:** Generates convergence plots and optimal policy heatmaps in the `value_iteration/` folder.
+* **Output:** Generates convergence plots and optimal policy heatmaps in the `results_V/` folder.
 
 ### 2. Run Q-Learning (Model-Free)
 This script trains an agent without knowledge of the transition dynamics. It runs multiple experiments (Baseline, Myopic, Aggressive) and generates sensitivity analysis plots.
 
-    python q_learning.py
+    python Q_learning.py
 
 * **Output:** Generates training curves, stability comparison plots, and sensitivity analysis figures in the `results_Q/` folder.
 
@@ -64,7 +65,7 @@ This script trains an agent without knowledge of the transition dynamics. It run
 * **Robustness:** The agent proved surprisingly robust to high learning rates ($\alpha=0.99$), showing that the Taxi-v3 environment is sufficiently deterministic that aggressive updates do not destabilize the policy.
 * **Sensitivity:** The agent requires a discount factor $\gamma \ge 0.3$ to learn the optimal path; values below this threshold result in myopic behavior.
 
-## 👥 Authors
+## Authors
 * Tzu Ping Chen
 * Kai Cheng Liu
 * Cheng-Yang Wu
